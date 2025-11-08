@@ -27,19 +27,20 @@ const userSchema = mongoose.Schema({
 });
 
 userSchema.pre('save', async function (next) {
-  const user = this;
+    const user = this;
 
-  try {
-    if (!user.isModified('password')) return next();
+    if(user.password.length <= 8) return next(new Error("Password must be 8 or more characters"));
 
-    if (user.password.startsWith('$2')) return next();
+    try {
+        if (!user.isModified('password')) return next();
+        if (validator.isHash(user.password, 'bcrypt')) return next();
 
-    const hash = await bcrypt.hash(user.password, SALT_ROUNDS);
-    user.password = hash;
-    next();
-  } catch (err) {
-    next(err);
-  }
+        const hash = await bcrypt.hash(user.password, SALT_ROUNDS);
+        user.password = hash;
+        next();
+    } catch (err) {
+        next(err);
+    }
 });
 
 userSchema.methods.comparePassword = async function(candidatePassword){

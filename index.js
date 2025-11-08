@@ -1,7 +1,10 @@
 import express from 'express';
 import connectDB from './config/db.js';
+
 import {router as userRoutes} from './routes/users.js';
 import {router as loginRouter} from './routes/login.js';
+import {router as registerRouter} from './routes/register.js';
+
 import routeValidator from './middlewares/routes.js';
 import errorHandler from './middlewares/errorHandler.js';
 import auth from './middlewares/auth.js';
@@ -13,9 +16,10 @@ connectDB();
 app.use(express.json());
 
 //routes
-app.get('/', (req, res) => res.status(200).json({message: "Hello To You"}));
-app.use('/users', auth, userRoutes);
-app.use('/login', loginRouter);
+app.get('/api/', (req, res) => res.status(200).json({message: "Hello To You"}));
+app.use('/api/users', auth, userRoutes);
+app.use('/api/login', loginRouter);
+app.use('/api/register', registerRouter);
 
 app.use(routeValidator);
 app.use(errorHandler);
