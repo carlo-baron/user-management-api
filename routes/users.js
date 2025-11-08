@@ -8,10 +8,28 @@ import {
 
 export const router = express.Router();
 
-router.get('/', getAllUsers);
+const checkPermission = (action) =>{
+    return (req, res, next) => {
+        const user = req.user;
+        const role = user.role;
 
-router.get('/:name', getUser);
+        const permissionMap = {
+            admin: ['create', 'read', 'update', 'delete'],
+            user: ['read']
+        }
 
-router.put('/:name', updateName);
+        if(permissionMap[role]?.includes(action)){
+            next();
+        }else{
+            next(new Error("Permission Denied"));
+        }
+    }
+}
 
-router.delete('/:name', deleteUser);
+router.get('/', checkPermission('read'), getAllUsers);
+
+router.get('/:name', checkPermission('read'), getUser);
+
+router.put('/:name', checkPermission('update'), updateName);
+
+router.delete('/:name', checkPermission('delete'), deleteUser);

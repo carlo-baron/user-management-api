@@ -7,5 +7,4 @@ const routeValidator = (req, res, next) => {
     next();
 }
 
-
 export default routeValidator;
