@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import validator from 'validator';
+import mongoose from 'mongoose'; import validator from 'validator'; import bcrypt from 'bcrypt';
+const SALT_ROUNDS = 10;
 
 const userSchema = mongoose.Schema({
     name: {
@@ -17,14 +17,34 @@ const userSchema = mongoose.Schema({
         type: String,
         unique: true,
         required: true,
+        lowercase: true,
         validate: [validator.isEmail, 'Invalid Email']
     },
     password: {
         type: String,
-        required: true
+        required: true,
     },
 });
 
-const User = mongoose.model('User', userSchema);
+userSchema.pre('save', async function (next) {
+  const user = this;
 
+  try {
+    if (!user.isModified('password')) return next();
+
+    if (user.password.startsWith('$2')) return next();
+
+    const hash = await bcrypt.hash(user.password, SALT_ROUNDS);
+    user.password = hash;
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+userSchema.methods.comparePassword = async function(candidatePassword){
+    return bcrypt.compare(candidatePassword, this.password);
+};
+
+const User = mongoose.model('User', userSchema);
 export default User;
