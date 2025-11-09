@@ -5,31 +5,35 @@ import {
     updateName,
     deleteUser,
 } from '#root/controllers/userController.js';
+import {
+    checkPermission,
+    checkOwnership,
+} from '#root/middlewares/authorization/authorize.js';
 
 export const router = express.Router();
 
-const checkPermission = (action) =>{
-    return (req, res, next) => {
-        const user = req.user;
-        const role = user.role;
+router.get(
+    '/', 
+    checkPermission('read')
+    , getAllUsers
+);
 
-        const permissionMap = {
-            admin: ['create', 'read', 'update', 'delete'],
-            user: ['read']
-        }
+router.get(
+    '/:name', 
+    checkPermission('read'),
+    getUser
+);
 
-        if(permissionMap[role]?.includes(action)){
-            next();
-        }else{
-            next(new Error("Permission Denied"));
-        }
-    }
-}
+router.put(
+    '/:name',
+    checkPermission('update'),
+    checkOwnership,
+    updateName
+);
 
-router.get('/', checkPermission('read'), getAllUsers);
-
-router.get('/:name', checkPermission('read'), getUser);
-
-router.put('/:name', checkPermission('update'), updateName);
-
-router.delete('/:name', checkPermission('delete'), deleteUser);
+router.delete(
+    '/:name',
+    checkPermission('delete'),
+    checkOwnership,
+    deleteUser
+);
