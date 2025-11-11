@@ -1,6 +1,7 @@
 import express from 'express';
 import connectDB from './config/db.js';
 import helmet from 'helmet';
+import cors from 'cors';
 
 import {router as userRoutes} from './routes/users.js';
 import {router as loginRouter} from './routes/login.js';
@@ -8,20 +9,21 @@ import {router as registerRouter} from './routes/register.js';
 
 import routeValidator from './middlewares/routes.js';
 import errorHandler from './middlewares/errorHandler.js';
-import auth from './middlewares/auth.js';
+import authenticate from './middlewares/authenticate.js';
 
 const app = express();
 const port = 3000;
 
-connectDB();
+await connectDB();
 app.use(express.json());
 app.use(helmet());
+app.use(cors());
 app.disable('x-powered-by');
 
 //routes
-app.get('/', (req, res) => res.status(200).json({success: true, message: "A Hello from Me to You"});
+app.get('/', (req, res) => res.status(200).json({success: true, message: "A Hello from Me to You"}));
 app.get('/api/', (req, res) => res.status(200).json({success: true, message: "Hello To You"}));
-app.use('/api/users', auth, userRoutes);
+app.use('/api/users', authenticate, userRoutes);
 app.use('/api/login', loginRouter);
 app.use('/api/register', registerRouter);
 
