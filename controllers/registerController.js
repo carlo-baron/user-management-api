@@ -13,7 +13,10 @@ export const register = async(req, res, next) => {
             err.status = 400;
             throw err;
         }
-        return res.status(200).json({message: "Account registered"});
+        return res.status(200).json({
+            success: true,
+            message: "Account registered"
+        });
     }catch(err){
         next(err);
     }

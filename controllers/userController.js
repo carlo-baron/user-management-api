@@ -8,7 +8,10 @@ export const getAllUsers = async(req, res, next) => {
             err.status = 404;
             throw err;
         };
-        return res.status(200).json({message: users});
+        return res.status(200).json({
+            success: true,
+            message: users
+        });
     }catch(err){
         next(err);
     }
@@ -23,7 +26,10 @@ export const getUser = async(req, res, next) => {
             err.status = 404;
             throw err;
         }
-        return res.status(200).json({message: "The user's email is: " + user.email });
+        return res.status(200).json({
+            success: true,
+            message: "The user's email is: " + user.email 
+        });
     }catch(err) {
         next(err)
     };
@@ -41,7 +47,10 @@ export const updateName = async(req, res, next) => {
         }
         user.name = body.new_name;
         await user.save();
-        return res.status(200).json({message: "User name updated"});
+        return res.status(200).json({
+            success: true,
+            message: "User name updated"
+        });
     }catch(err){
         next(err);
     }
@@ -59,7 +68,10 @@ export const deleteUser = async(req, res, next) => {
         }
         user.name = body.new_name;
         await user.save();
-        return res.status(200).json({message: "User name updated"});
+        return res.status(200).json({
+            success: true,
+            message: "User name updated"
+        });
     }catch(err){
         next(err);
     }

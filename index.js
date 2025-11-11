@@ -1,5 +1,6 @@
 import express from 'express';
 import connectDB from './config/db.js';
+import helmet from 'helmet';
 
 import {router as userRoutes} from './routes/users.js';
 import {router as loginRouter} from './routes/login.js';
@@ -14,9 +15,12 @@ const port = 3000;
 
 connectDB();
 app.use(express.json());
+app.use(helmet());
+app.disable('x-powered-by');
 
 //routes
-app.get('/api/', (req, res) => res.status(200).json({message: "Hello To You"}));
+app.get('/', (req, res) => res.status(200).json({success: true, message: "A Hello from Me to You"});
+app.get('/api/', (req, res) => res.status(200).json({success: true, message: "Hello To You"}));
 app.use('/api/users', auth, userRoutes);
 app.use('/api/login', loginRouter);
 app.use('/api/register', registerRouter);
