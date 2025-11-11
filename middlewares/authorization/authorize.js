@@ -12,13 +12,3 @@ export const checkPermission = (action) =>{
         }
     }
 }
-
-export const checkOwnership = (req, res, next) => {
-    const { name } = req.params;
-    if(req.user.name !== name){
-        const err = new Error("Permission Denied");
-        err.status = 403;
-        return next(err);
-    }
-    next();
-}

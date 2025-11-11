@@ -7,8 +7,17 @@ import {
 } from '#root/controllers/userController.js';
 import {
     checkPermission,
-    checkOwnership,
 } from '#root/middlewares/authorization/authorize.js';
+
+const isUser = (req, res, next) => {
+    const { name } = req.params;
+    if(req.user.name !== name){
+        const err = new Error("Permission Denied");
+        err.status = 403;
+        return next(err);
+    }
+    next();
+}
 
 export const router = express.Router();
 
@@ -27,13 +36,13 @@ router.get(
 router.put(
     '/:name',
     checkPermission('update'),
-    checkOwnership,
+    isUser,
     updateName
 );
 
 router.delete(
     '/:name',
     checkPermission('delete'),
-    checkOwnership,
+    isUser,
     deleteUser
 );
