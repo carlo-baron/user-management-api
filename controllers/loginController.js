@@ -1,4 +1,5 @@
 import User from '#root/models/User.js';
+import validator from 'validator';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { RateLimiterMongo } from 'rate-limiter-flexible';
@@ -23,14 +24,17 @@ const secret = process.env.JWT_SECRET;
 export const login = async (req, res, next) => {
     rateLimiterMongo = await getRateLimiter();
     const { name, password } = req.body;
-    const rlUser = await rateLimiterMongo.get(name);
+
+    const username = validator.escape(name);
+
+    const rlUser = await rateLimiterMongo.get(username);
     if(rlUser !== null && rlUser.consumedPoints > maxLoginAttempts){
         const err = new Error("Too Many Requests");
         err.status = 429;
         throw err;
     }else{
         try{
-            const user = await User.findOne({name});
+            const user = await User.findOne({username});
             if(!user){
                 const err = new Error("Invalid name or password");
                 err.status = 400;
@@ -40,7 +44,7 @@ export const login = async (req, res, next) => {
             const isMatch = await user.comparePassword(password);
             if(!isMatch){
                 try{
-                    await rateLimiterMongo.consume(name);
+                    await rateLimiterMongo.consume(username);
 
                     const err = new Error("Invalid name or password");
                     err.status = 400;
@@ -57,12 +61,12 @@ export const login = async (req, res, next) => {
             }
             
             if(rlUser !== null && rlUser.consumedPoints > 0){
-                await rateLimiterMongo.delete(name);
+                await rateLimiterMongo.delete(username);
             }
 
             const token = jwt.sign({ 
                 id: user._id,
-                name: user.name,
+                name: user.username,
                 role: user.role 
             }, secret,{
                 expiresIn: '24h'
@@ -70,7 +74,7 @@ export const login = async (req, res, next) => {
 
             return res.status(200).json({
                 success: true,
-                message: "Logged in as: " + name,
+                message: "Logged in as: " + username,
                 token: token,
             });
         }catch(err){
