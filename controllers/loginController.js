@@ -18,7 +18,6 @@ async function getRateLimiter(){
     return new RateLimiterMongo(opts);
 }
 
-
 const secret = process.env.JWT_SECRET;
 
 export const login = async (req, res, next) => {
@@ -34,7 +33,7 @@ export const login = async (req, res, next) => {
         throw err;
     }else{
         try{
-            const user = await User.findOne({username});
+            const user = await User.findOne({name: username});
             if(!user){
                 const err = new Error("Invalid name or password");
                 err.status = 400;
@@ -64,21 +63,73 @@ export const login = async (req, res, next) => {
                 await rateLimiterMongo.delete(username);
             }
 
-            const token = jwt.sign({ 
+            const accessToken = jwt.sign({ 
                 id: user._id,
-                name: user.username,
+                name: user.name,
                 role: user.role 
             }, secret,{
-                expiresIn: '24h'
+                expiresIn: '10m'
             });
 
+            const refreshToken = jwt.sign({
+                name: user.name,
+            }, secret, {
+                expiresIn: '1d'
+            });
+
+            res.cookie('jwt', refreshToken, {
+                httpOnly: true,
+                sameSite: 'None', secure: true,
+                maxAge: 24 * 60 * 60 * 1000,
+            });
             return res.status(200).json({
                 success: true,
                 message: "Logged in as: " + username,
-                token: token,
+                token: accessToken,
             });
         }catch(err){
             next(err);
         }
     }
 }
+export const refresh = async (req, res, next) => {
+    try {
+        if (!req.cookies?.jwt) {
+            const err = new Error("Permission Denied");
+            err.status = 400;
+            return next(err);
+        }
+
+        const refreshToken = req.cookies.jwt;
+
+        const decoded = jwt.verify(refreshToken, secret);
+        const username = decoded.name;
+
+        const user = await User.findOne({ name: username });
+        if (!user) {
+            const err = new Error("Invalid Credentials");
+            err.status = 400;
+            return next(err);
+        }
+
+        const accessToken = jwt.sign(
+            {
+                id: user._id,
+                name: user.name,
+                role: user.role,
+            },
+            secret,
+            { expiresIn: "10m" }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Refreshed Token of: " + username,
+            token: accessToken,
+        });
+
+    } catch (err) {
+        return next(err);
+    }
+};
+
