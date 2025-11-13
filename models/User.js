@@ -31,13 +31,21 @@ const userSchema = mongoose.Schema({
         required: true,
         enum: ['admin', 'user'],
         default: 'user'
+    },
+    tokenVersion: {
+        type: Number,
+        default: 0
+    },
+    isLoggedIn: {
+        type: Boolean,
+        default: false
     }
 });
 
 userSchema.pre('save', async function (next) {
     const user = this;
 
-    if(user.password.length <= 8) return next(new Error("Password must be 8 or more characters"));
+    if(user.password.length < 8) return next(new Error("Password must be 8 or more characters"));
 
     try {
         if (!user.isModified('password')) return next();
@@ -54,6 +62,21 @@ userSchema.pre('save', async function (next) {
 userSchema.methods.comparePassword = async function(candidatePassword){
     return bcrypt.compare(candidatePassword, this.password);
 };
+
+userSchema.methods.login = function(){
+    this.isLoggedIn = true;
+    return this.save();
+}
+
+userSchema.methods.logout = function(){
+    this.isLoggedIn = false;
+    return this.save();
+}
+
+userSchema.methods.incrementTokenVersion = function(){
+    this.tokenVersion += 1;
+    return this.save();
+}
 
 const User = mongoose.model('User', userSchema);
 export default User;

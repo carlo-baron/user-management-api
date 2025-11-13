@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import User from '#root/models/User.js';
 
 const secret = process.env.JWT_SECRET;
 
@@ -12,14 +13,24 @@ const authenticate = (req, res, next) => {
             throw err;
         }
 
-        jwt.verify(token, secret, (err, decoded) => {
+        jwt.verify(token, secret, async (err, decoded) => {
             if(err){
-                const err = new Error("Invalid or expired token"); 
-                err.status = 401;
+                return next(err);
+            }
+
+            try{
+                const user = await User.findOne({name: decoded.name});
+                if(decoded.tokenVersion !== user.tokenVersion){
+                    const err = new Error("Invalid or expired token"); 
+                    err.status = 401;
+                    throw err;
+                }
+
+                req.user = decoded;
+                next();
+            }catch(err){
                 next(err);
             }
-            req.user = decoded;
-            next();
         });
     }catch(err){
         next(err);

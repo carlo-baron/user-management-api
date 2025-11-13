@@ -1,8 +1,10 @@
-import User from '#root/models/User.js';
 import validator from 'validator';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { RateLimiterMongo } from 'rate-limiter-flexible';
+
+import Blacklist from '#root/models/Blacklist.js';
+import User from '#root/models/User.js';
 
 const maxLoginAttempts = 5;
 let rateLimiterMongo;
@@ -66,14 +68,14 @@ export const login = async (req, res, next) => {
             const accessToken = jwt.sign({ 
                 id: user._id,
                 name: user.name,
-                role: user.role 
+                role: user.role ,
+                tokenVersion: user.tokenVersion
             }, secret,{
-                expiresIn: '10m'
+                expiresIn: '5m'
             });
 
             const refreshToken = jwt.sign({
                 name: user.name,
-                role: user.role,
             }, secret, {
                 expiresIn: '1d'
             });
@@ -83,6 +85,8 @@ export const login = async (req, res, next) => {
                 sameSite: 'None', secure: true,
                 maxAge: 24 * 60 * 60 * 1000,
             });
+
+            user.login();
             return res.status(200).json({
                 success: true,
                 message: "Logged in as: " + username,
@@ -96,12 +100,19 @@ export const login = async (req, res, next) => {
 export const refresh = async (req, res, next) => {
     try {
         if (!req.cookies?.jwt) {
-            const err = new Error("Permission Denied");
-            err.status = 400;
-            return next(err);
+            const err = new Error("Unauthorized");
+            err.status = 401;
+            throw err;
         }
 
         const refreshToken = req.cookies.jwt;
+
+        const isBlacklisted = await Blacklist.findOne({token: refreshToken});
+        if(isBlacklisted){
+            const err = new Error("Unauthorized");
+            err.status = 401;
+            throw err;
+        }
 
         const decoded = jwt.verify(refreshToken, secret);
         const username = decoded.name;
@@ -110,17 +121,19 @@ export const refresh = async (req, res, next) => {
         if (!user) {
             const err = new Error("Invalid Credentials");
             err.status = 400;
-            return next(err);
+            throw err;
         }
+        await user.incrementTokenVersion();
 
         const accessToken = jwt.sign(
             {
                 id: user._id,
                 name: user.name,
                 role: user.role,
+                tokenVersion: user.tokenVersion
             },
             secret,
-            { expiresIn: "10m" }
+            { expiresIn: "5m" }
         );
 
         return res.status(200).json({
@@ -130,7 +143,7 @@ export const refresh = async (req, res, next) => {
         });
 
     } catch (err) {
-        return next(err);
+        next(err);
     }
 };
 
@@ -157,13 +170,26 @@ export const register = async(req, res, next) => {
 }
 
 export const logout = async (req, res, next) => {
-    try{
+    if(req.cookies?.jwt){
+        const refreshToken = req.cookies?.jwt;
+        const decoded = jwt.verify(refreshToken, secret);
+        await Blacklist.create({
+            token: refreshToken,
+            expiresAt: new Date(decoded.exp * 1000),
+        });
+
+        const user = await User.findOne({name: decoded.name});
+        await user.logout();
+        await user.incrementTokenVersion();
+
         res.clearCookie('jwt');
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Logged out successfully"
         });
-    }catch(err){
-        next(err); 
+    }else{
+        const err = new Error("You must login first");
+        err.status = 401;
+        return next(err);
     }
 }
