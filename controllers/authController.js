@@ -73,6 +73,7 @@ export const login = async (req, res, next) => {
 
             const refreshToken = jwt.sign({
                 name: user.name,
+                role: user.role,
             }, secret, {
                 expiresIn: '1d'
             });
@@ -152,5 +153,17 @@ export const register = async(req, res, next) => {
         });
     }catch(err){
         next(err);
+    }
+}
+
+export const logout = async (req, res, next) => {
+    try{
+        res.clearCookie('jwt');
+        res.status(200).json({
+            success: true,
+            message: "Logged out successfully"
+        });
+    }catch(err){
+        next(err); 
     }
 }
