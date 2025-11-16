@@ -3,8 +3,11 @@ import mongoose from 'mongoose';
 const blacklistSchema = mongoose.Schema({
     token: {
         type: String,
-        expiresAt: Date,
         required: true
+    },
+    expiresAt: {
+        type: Date,
+        required: true,
     }
 });
 
